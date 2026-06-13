@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fuji San Lanka Pvt Ltd — Production Accounting System</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+
+<div id="loader">
+  <div class="spinner"></div>
+  <div id="loaderText" style="color:var(--accent); font-weight:600; font-size:14px; letter-spacing:1px; text-transform:uppercase;">Loading Fuji San Lanka</div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<div class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="brand-logo">
+      <div class="brand-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2L3 13h4.5L10 8l2.5 5H17L10 2z" fill="white" opacity="0.9"/>
+          <path d="M6 14.5L10 8l4 6.5" stroke="white" stroke-width="1" fill="none" opacity="0.5" stroke-linejoin="round"/>
+          <rect x="3" y="15" width="14" height="2" rx="1" fill="white" opacity="0.6"/>
+        </svg>
+      </div>
+      <div class="brand-wordmark">
+        <div class="brand-name"><span>Fuji</span> San Lanka</div>
+        <div class="brand-sub">Production Accounting</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="agent-switcher">
+    <div class="agent-label">Sub-Garment Agents</div>
+    <div class="agent-tabs" id="agentTabs"></div>
+    <button class="add-agent-btn" onclick="openAddAgentModal()">+ Add Sub-Agent</button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Navigation</div>
+    <a class="nav-item active" onclick="navTo('dashboard',this);closeSidebar()"><span class="ico">📊</span>Dashboard</a>
+    <a class="nav-item" onclick="navTo('cutting',this);closeSidebar()"><span class="ico">✂️</span>Cutting &amp; Dispatch</a>
+    <a class="nav-item" onclick="navTo('finishing',this);closeSidebar()"><span class="ico">📦</span>Finishing Receipts</a>
+    <a class="nav-item" onclick="navTo('ledger',this);closeSidebar()"><span class="ico">💰</span>Account Ledger</a>
+    <a class="nav-item" onclick="navTo('summary',this);closeSidebar()"><span class="ico">📄</span>Statement / Invoice</a>
+  </div>
+
+  <div class="sidebar-footer">
+    <button class="btn btn-excel btn-sm" onclick="exportExcelAll()" style="width:100%">📊 Export All Excel</button>
+    <button class="btn btn-universal btn-sm" onclick="exportPDFUniversal()" style="width:100%">📄 Universal PDF</button>
+    <div style="text-align:center;font-size:9.5px;color:var(--text3);padding:4px 0;letter-spacing:.5px" id="saveStatus">Auto-saved</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="hamburger" onclick="toggleSidebar()">☰</button>
+      <div>
+        <div class="page-title" id="topTitle">Executive Dashboard</div>
+        <div class="page-subtitle" id="topSub">Fuji San Lanka Pvt Ltd — Hummingbird Clothing</div>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙 Dark</button>
+      <span class="agent-badge" id="agentBadge">Loading…</span>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <div class="page active" id="page-dashboard">
+      <div class="export-bar hide-on-capture">
+        <span class="export-bar-label">📊 Export:</span>
+        <button class="btn btn-pdf btn-sm" onclick="exportTabPDF('dashboard')">📄 Dashboard PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="printTab('dashboard')">🖨️ Print Dashboard</button>
+        <button class="btn btn-excel btn-sm" onclick="exportTabExcel('dashboard')">📊 Tab Excel</button>
+      </div>
+      <div class="kpi-grid" id="kpiGrid">
+        <div class="kpi-card blue"><div class="kpi-label">Total Expected Output</div><div class="kpi-val" id="k1">0</div><div class="kpi-sub">Units from all dispatches</div></div>
+        <div class="kpi-card green"><div class="kpi-label">Finished Goods Received</div><div class="kpi-val" id="k2">0</div><div class="kpi-sub">Grade A + Damaged Complete</div></div>
+        <div class="kpi-card red"><div class="kpi-label">Production Shortage</div><div class="kpi-val" id="k3">0</div><div class="kpi-sub">Deficit units</div></div>
+        <div class="kpi-card yellow"><div class="kpi-label">Total Value Generated</div><div class="kpi-val" id="k4">LKR 0</div><div class="kpi-sub">All billable work</div></div>
+      </div>
+      <div class="fin-bar">
+        <div class="fin-bar-item"><div class="val" id="d1">LKR 0.00</div><div class="lbl">Total Gross Bills</div></div>
+        <div class="fin-bar-item green"><div class="val" id="d2">LKR 0.00</div><div class="lbl">Payments Disbursed</div></div>
+        <div class="fin-bar-item red"><div class="val" id="d3">LKR 0.00</div><div class="lbl">Outstanding Balance</div></div>
+      </div>
+      <div class="glass-card">
+        <div class="section-title">All Agents Summary</div>
+        <div class="table-wrap">
+          <table id="agentSummaryTable">
+            <thead><tr><th>Agent Name</th><th>Expected Qty</th><th>Finished Goods</th><th>Shortage</th><th>Gross Bills</th><th>Payments</th><th>Outstanding</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-cutting">
+      <div id="page-cutting-content">
+        <div class="export-bar hide-on-capture">
+          <span class="export-bar-label">📊 Export Full Log:</span>
+          <button class="btn btn-pdf btn-sm" onclick="exportTabPDF('cutting')">📄 PDF Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="printTab('cutting')">🖨️ Print Report</button>
+          <button class="btn btn-excel btn-sm" onclick="exportTabExcel('cutting')">📊 Excel Export</button>
+        </div>
+        <div class="glass-card">
+          <div class="section-title">Add New Dispatch Entry</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Cut Invoice No. <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(or "No Inv 001" if no invoice)</span></label>
+              <input class="form-input" id="cInvoice" placeholder="e.g. CUT-001-2025 or No Inv 001">
+            </div>
+            <div class="form-group"><label class="form-label">Date Dispatched *</label><input type="date" class="form-input" id="cDate"></div>
+            <div class="form-group"><label class="form-label">Item / Description</label><input class="form-input" id="cItemName" placeholder="e.g. Cotton Shirt"></div>
+            <div class="form-group"><label class="form-label">Cut Description</label><input class="form-input" id="cDescription" placeholder="e.g. Round Neck, Short Sleeve"></div>
+            <div class="form-group"><label class="form-label">No. of Cuts *</label><input type="number" class="form-input" id="cLayers" placeholder="e.g. 3" min="1" oninput="calcCut()"></div>
+            <div class="form-group"><label class="form-label">Layers per Cut *</label><input type="number" class="form-input" id="cSizes" placeholder="e.g. 100" min="1" oninput="calcCut()"></div>
+            <div class="form-group"><label class="form-label">Sizes (e.g. S,M,L,XL)</label><input class="form-input" id="cSizesLabel" placeholder="e.g. S, M, L, XL, XXL"></div>
+            <div class="form-group"><label class="form-label">Unit Rate (LKR) *</label><input type="number" class="form-input" id="cRate" placeholder="0.00" step="0.01" oninput="calcCut()"></div>
+            <div class="form-group"><label class="form-label">Status *</label>
+              <select class="form-input" id="cStatus">
+                <option value="">— Select —</option>
+                <option value="Pending">⏳ Pending</option>
+                <option value="In Progress">🔄 In Progress</option>
+                <option value="Completed">✅ Completed</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="section-title" style="margin-top:20px; font-size:11px;">Accessories Issued (Optional)</div>
+          <div id="accessoriesContainer" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+          <button class="btn btn-ghost btn-sm" onclick="addAccessoryField()">➕ Add Accessory</button>
+
+          <div class="calc-note">
+            <strong>Expected Qty:</strong> Cuts × Layers = <strong id="cExpQty">0</strong> units &nbsp;|&nbsp;
+            <strong>Projected Value:</strong> LKR <strong id="cProjVal">0.00</strong>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-success" onclick="addCutting()">➕ Add Entry</button>
+            <button class="btn btn-ghost" onclick="clearCuttingForm()">Clear</button>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="section-title">Dispatch Log</div>
+          <div class="table-wrap">
+            <table id="cutTable">
+              <thead><tr><th>Invoice No.</th><th>Date</th><th>Item</th><th>Description</th><th>Cuts</th><th>Layers</th><th>Sizes</th><th>Exp. Qty</th><th>Unit Rate</th><th>Proj. Value</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-finishing">
+      <div id="page-finishing-content">
+          <div class="export-bar hide-on-capture">
+            <span class="export-bar-label">📊 Export Full Log:</span>
+            <button class="btn btn-pdf btn-sm" onclick="exportTabPDF('finishing')">📄 PDF Report</button>
+            <button class="btn btn-ghost btn-sm" onclick="printTab('finishing')">🖨️ Print Report</button>
+            <button class="btn btn-excel btn-sm" onclick="exportTabExcel('finishing')">📊 Excel Export</button>
+          </div>
+          <div class="glass-card">
+            <div class="section-title">Record Incoming Finished Inventory</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Sub Invoice No. <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(or "No Inv 001" if none)</span></label>
+                <input class="form-input" id="fSubInv" placeholder="e.g. SUB-INV-001 or No Inv 001">
+              </div>
+              <div class="form-group"><label class="form-label">Link Cut Invoice *</label>
+                <select class="form-input" id="fCutInv" onchange="onCutSelect()"><option value="">— Select —</option></select>
+              </div>
+              <div class="form-group"><label class="form-label">Date Received *</label><input type="date" class="form-input" id="fDate"></div>
+              <div class="form-group"><label class="form-label">Expected Qty (auto-filled)</label><input type="number" class="form-input" id="fExpQty" disabled></div>
+              <div class="form-group"><label class="form-label">A: Grade A Goods *</label><input type="number" class="form-input" id="fGradeA" placeholder="0" min="0" oninput="calcFin()"></div>
+              <div class="form-group"><label class="form-label">B: Damaged Complete *</label><input type="number" class="form-input" id="fDmgComp" placeholder="0" min="0" oninput="calcFin()"></div>
+              <div class="form-group"><label class="form-label">C: Waste (Non-Billable) *</label><input type="number" class="form-input" id="fWaste" placeholder="0" min="0" oninput="calcFin()"></div>
+            </div>
+            <div class="calc-note">
+              <strong>Total Accepted:</strong> <strong id="fTotAcc">0</strong> &nbsp;|&nbsp;
+              <strong>Shortage:</strong> <strong id="fShort">0</strong> &nbsp;|&nbsp;
+              <strong>Unit Rate:</strong> LKR <strong id="fURate">0.00</strong> &nbsp;|&nbsp;
+              <strong>Gross Bill:</strong> LKR <strong id="fGross">0.00</strong>
+            </div>
+            <div class="btn-group">
+              <button class="btn btn-success" onclick="addFinishing()">➕ Record Receipt</button>
+              <button class="btn btn-ghost" onclick="clearFinForm()">Clear</button>
+            </div>
+          </div>
+          <div class="glass-card">
+            <div class="section-title">Finishing Receipts</div>
+            <div class="table-wrap">
+              <table id="finTable">
+                <thead><tr><th>Sub Invoice</th><th>Cut Invoice</th><th>Date</th><th>Grade A</th><th>Dmg Complete</th><th>Waste</th><th>Total Accepted</th><th>Shortage</th><th>Unit Rate</th><th>Gross Bill</th><th>Actions</th></tr></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-ledger">
+      <div id="page-ledger-content">
+        <div class="export-bar hide-on-capture">
+          <span class="export-bar-label">📊 Export Full Log:</span>
+          <button class="btn btn-pdf btn-sm" onclick="exportTabPDF('ledger')">📄 PDF Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="printTab('ledger')">🖨️ Print Report</button>
+          <button class="btn btn-excel btn-sm" onclick="exportTabExcel('ledger')">📊 Excel Export</button>
+        </div>
+        <div class="glass-card">
+          <div class="section-title">Record Transaction</div>
+          <div class="form-grid">
+            <div class="form-group"><label class="form-label">Date *</label><input type="date" class="form-input" id="lDate"></div>
+            <div class="form-group"><label class="form-label">Type *</label>
+              <select class="form-input" id="lType" onchange="onLedgerType()">
+                <option value="">— Select —</option>
+                <option value="Invoice Accrual">📋 Invoice Accrual</option>
+                <option value="Disbursed Payment">💳 Disbursed Payment</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Reference No. <span style="color:var(--text3);font-size:10px;text-transform:none;font-weight:400">(or "No Inv 001" if none)</span></label>
+              <input class="form-input" id="lRef" placeholder="e.g. SUB-INV-001 or No Inv 001">
+            </div>
+            <div class="form-group" id="lPayMtdGrp" style="display:none">
+              <label class="form-label">Payment Method</label>
+              <div class="pay-pills" id="payPills">
+                <span class="pay-pill" onclick="selectPayPill(this,'Cash Payment')">💵 Cash</span>
+                <span class="pay-pill" onclick="selectPayPill(this,'Cheque Payment')">📝 Cheque</span>
+                <span class="pay-pill" onclick="selectPayPill(this,'Bank Deposit')">🏦 Bank Deposit</span>
+                <span class="pay-pill" onclick="selectPayPill(this,'Online Transfer')">🔁 Online Transfer</span>
+              </div>
+              <input type="hidden" id="lPayMtd" value="">
+            </div>
+            <div class="form-group" id="lTxRefGrp" style="display:none"><label class="form-label">Cheque / Transfer Ref No.</label><input class="form-input" id="lTxRef" placeholder="Cheque No / Transaction ID"></div>
+            <div class="form-group"><label class="form-label" id="lAmtLabel">Amount (LKR) *</label><input type="number" class="form-input" id="lAmt" placeholder="0.00" step="0.01" oninput="refreshDash()"></div>
+          </div>
+          <div class="calc-note">
+            <strong>Current Balance:</strong> LKR <strong id="lCurBal">0.00</strong> &nbsp;|&nbsp;
+            <strong>After this entry:</strong> LKR <strong id="lNewBal">0.00</strong>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-success" onclick="addLedger()">➕ Record Transaction</button>
+            <button class="btn btn-ghost" onclick="clearLedger()">Clear</button>
+          </div>
+        </div>
+        <div class="glass-card">
+          <div class="section-title">Account Ledger</div>
+          <div class="table-wrap">
+            <table id="ledTable">
+              <thead><tr><th>Date</th><th>Type</th><th>Reference</th><th>Payment Method</th><th>Debit (Paid)</th><th>Credit (Earned)</th><th>Running Balance</th><th>Actions</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="page-summary">
+      <div class="export-bar hide-on-capture">
+        <span class="export-bar-label">📊 Actions:</span>
+        <button class="btn btn-pdf btn-sm" onclick="exportTabPDF('summary')">📄 Download PDF</button>
+        <button class="btn btn-ghost btn-sm" onclick="printInvoice()">🖨️ Print Statement</button>
+        <button class="btn btn-excel btn-sm" onclick="exportTabExcel('summary')">📊 Excel Export</button>
+        <button class="btn btn-primary btn-sm" onclick="buildInvoice()">🔄 Refresh</button>
+      </div>
+
+      <div class="inv-wrap" id="invoiceArea">
+        <div class="inv-head">
+          <div class="inv-head-top">
+            <div>
+              <h1>Fuji San Lanka Pvt Ltd</h1>
+              <div class="inv-tagline">Hummingbird Clothing Division — Statement of Account</div>
+            </div>
+            <div class="inv-head-meta">
+              <div style="font-size:10px;opacity:.7;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">Statement</div>
+              <div class="inv-no" id="invStatementNo">—</div>
+              <div class="inv-created" id="invCreatedDate">Created: —</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="inv-body">
+          <div class="inv-meta">
+            <div class="inv-meta-block">
+              <h4>Sub-Agent</h4>
+              <p id="invAgent">—</p>
+            </div>
+            <div class="inv-meta-block">
+              <h4>Statement Period</h4>
+              <p>From inception to current date</p>
+            </div>
+          </div>
+          <div class="inv-summary-grid" id="invSummaryGrid">
+            <div class="inv-summary-box">
+              <h5>Total Payable</h5>
+              <div style="font-size:20px;font-weight:800;color:#2563eb" id="invTotalPayable">LKR 0.00</div>
+              <div style="font-size:11px;color:#6b7a94;margin-top:4px">Based on all finishing receipts</div>
+            </div>
+            <div class="inv-summary-box">
+              <h5>Total Payments Upto Date</h5>
+              <div style="font-size:20px;font-weight:800;color:#059669" id="invTotalPaidSummary">LKR 0.00</div>
+              <div style="font-size:11px;color:#6b7a94;margin-top:4px">All disbursements recorded</div>
+            </div>
+          </div>
+          <div class="inv-section-title">Finishing Receipts</div>
+          <table class="inv-table">
+            <thead><tr><th>Sub Invoice</th><th>Date</th><th>Total Accepted</th><th>Unit Rate</th><th>Gross Bill</th></tr></thead>
+            <tbody id="invFinRows"></tbody>
+          </table>
+          <div class="inv-section-title">Payment History</div>
+          <table class="inv-table">
+            <thead><tr><th>Date</th><th>Reference No.</th><th>Type</th><th>Payment Method</th><th>Cheque / Transfer Ref</th><th>Amount</th></tr></thead>
+            <tbody id="invLedRows"></tbody>
+          </table>
+          <div class="inv-total-row">
+            <div class="inv-total-block">
+              <div class="inv-total-line"><span>Total Work Rendered</span><span id="invTotalWork">LKR 0.00</span></div>
+              <div class="inv-total-line"><span>Total Payments Received</span><span id="invTotalPaid">LKR 0.00</span></div>
+              <div class="inv-total-line final"><span>Net Outstanding Balance</span><span id="invBalance">LKR 0.00</span></div>
+            </div>
+          </div>
+          <div class="inv-sign">
+            <div class="inv-sign-block"><div class="line"></div>Prepared By</div>
+            <div class="inv-sign-block"><div class="line"></div>Authorized Signature</div>
+            <div class="inv-sign-block"><div class="line"></div>Sub-Agent Acknowledgement</div>
+          </div>
+        </div>
+        <div class="inv-footer">
+          <span>Fuji San Lanka Pvt Ltd — Hummingbird Clothing Division</span>
+          <span id="invFooterDate"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="inv-wrap" id="listReportArea" style="display:none; width:900px; background:#fff; margin:20px auto;">
+        <div class="inv-head">
+          <div class="inv-head-top">
+            <div>
+              <h1>Fuji San Lanka Pvt Ltd</h1>
+              <div class="inv-tagline">Hummingbird Clothing Division — Official Report</div>
+            </div>
+            <div class="inv-head-meta">
+              <div style="font-size:10px;opacity:.7;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">Date Generated</div>
+              <div class="inv-no" id="lr-date">—</div>
+              <div class="inv-created" id="lr-agent">Agent: —</div>
+            </div>
+          </div>
+        </div>
+        <div class="inv-body">
+          <div class="inv-section-title" id="lr-title" style="font-size:14px; color:#1a2540;">Report Title</div>
+          <table class="inv-table" style="margin-top:16px;">
+            <thead id="lr-thead"></thead>
+            <tbody id="lr-tbody"></tbody>
+          </table>
+          <div class="inv-footer" style="margin-top:40px; padding:0; border:none; background:transparent;">
+            <span>Fuji San Lanka Pvt Ltd — Hummingbird Clothing Division</span>
+          </div>
+        </div>
+    </div>
+
+    <div class="inv-wrap" id="universalReportArea" style="display:none; width:900px; background:#fff; margin:20px auto;">
+        <div class="inv-head">
+          <div class="inv-head-top">
+            <div>
+              <h1>Fuji San Lanka Pvt Ltd</h1>
+              <div class="inv-tagline">Hummingbird Clothing Division — Master Agent Report</div>
+            </div>
+            <div class="inv-head-meta">
+              <div style="font-size:10px;opacity:.7;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">Generated</div>
+              <div class="inv-no" id="ur-date">—</div>
+              <div class="inv-created" id="ur-agent">Agent: —</div>
+            </div>
+          </div>
+        </div>
+        <div class="inv-body">
+            <div class="inv-summary-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+              <div class="inv-summary-box"><h5>Total Expected Units</h5><div style="font-size:18px;font-weight:800;color:#1a2540" id="ur-exp">0</div></div>
+              <div class="inv-summary-box"><h5>Finished Goods Accepted</h5><div style="font-size:18px;font-weight:800;color:#059669" id="ur-acc">0</div></div>
+              <div class="inv-summary-box"><h5>Total Shortage</h5><div style="font-size:18px;font-weight:800;color:#dc2626" id="ur-short">0</div></div>
+              <div class="inv-summary-box"><h5>Total Gross Payable</h5><div style="font-size:18px;font-weight:800;color:#2563eb" id="ur-gross">LKR 0</div></div>
+              <div class="inv-summary-box"><h5>Total Paid Disbursed</h5><div style="font-size:18px;font-weight:800;color:#059669" id="ur-paid">LKR 0</div></div>
+              <div class="inv-summary-box" style="background:#fef2f2; border-color:#fecaca"><h5>Net Outstanding</h5><div style="font-size:18px;font-weight:800;color:#dc2626" id="ur-out">LKR 0</div></div>
+            </div>
+
+            <div class="inv-section-title">1. Cutting & Dispatch Log</div>
+            <table class="inv-table">
+              <thead><tr><th>Invoice</th><th>Date</th><th>Item</th><th>Cuts/Layers</th><th>Exp. Qty</th><th>Proj. Value</th></tr></thead>
+              <tbody id="ur-cut-tb"></tbody>
+            </table>
+
+            <div class="inv-section-title" style="margin-top:30px">2. Finishing Receipts</div>
+            <table class="inv-table">
+              <thead><tr><th>Sub Invoice</th><th>Cut Ref</th><th>Date</th><th>Accepted</th><th>Shortage</th><th>Gross Bill</th></tr></thead>
+              <tbody id="ur-fin-tb"></tbody>
+            </table>
+
+            <div class="inv-section-title" style="margin-top:30px">3. Account Ledger (Payments & Accruals)</div>
+            <table class="inv-table">
+              <thead><tr><th>Date</th><th>Type</th><th>Ref</th><th>Method</th><th>Paid Out</th><th>Earned</th></tr></thead>
+              <tbody id="ur-led-tb"></tbody>
+            </table>
+            
+            <div class="inv-footer" style="margin-top:40px; padding:0; border:none; background:transparent;">
+              <span>Fuji San Lanka Pvt Ltd — Complete Financial Audit</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="inv-wrap" id="cutInvoiceArea" style="display:none; width:900px; background:#fff; margin:20px auto;">
+        <div class="inv-head">
+          <div class="inv-head-top">
+            <div>
+              <h1>Fuji San Lanka Pvt Ltd</h1>
+              <div class="inv-tagline">Hummingbird Clothing Division — Cutting Issue Note</div>
+            </div>
+            <div class="inv-head-meta">
+              <div style="font-size:10px;opacity:.7;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">Invoice No.</div>
+              <div class="inv-no" id="ci-no">—</div>
+              <div class="inv-created" id="ci-date">Date: —</div>
+            </div>
+          </div>
+        </div>
+        <div class="inv-body">
+            <div class="inv-meta">
+              <div class="inv-meta-block"><h4>Sub-Agent</h4><p id="ci-agent">—</p></div>
+              <div class="inv-meta-block"><h4>Item Name</h4><p id="ci-item">—</p></div>
+            </div>
+            <div class="inv-summary-grid">
+              <div class="inv-summary-box"><h5>Cut Details</h5><div style="font-size:14px;color:#1a2540;font-weight:600;margin-top:4px" id="ci-desc">—</div><div style="font-size:12px;color:#6b7a94;margin-top:4px"><span id="ci-cuts">0</span> Cuts × <span id="ci-layers">0</span> Layers</div></div>
+              <div class="inv-summary-box"><h5>Expected Output</h5><div style="font-size:20px;font-weight:800;color:#2563eb" id="ci-exp">0</div><div style="font-size:11px;color:#6b7a94;margin-top:4px">Total units to be finished</div></div>
+            </div>
+            <div class="inv-section-title">Accessories Issued</div>
+            <table class="inv-table">
+              <thead><tr><th>Accessory Item</th><th>Quantity Issued</th></tr></thead>
+              <tbody id="ci-acc-tbody"></tbody>
+            </table>
+            <div class="inv-sign">
+              <div class="inv-sign-block"><div class="line"></div>Prepared By</div>
+              <div class="inv-sign-block"><div class="line"></div>Delivered By</div>
+              <div class="inv-sign-block"><div class="line"></div>Received By (Sub-Agent)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="inv-wrap" id="receiptArea" style="display:none; width:900px; background:#fff; margin:20px auto;">
+        <div class="inv-head">
+          <div class="inv-head-top">
+            <div>
+              <h1>Fuji San Lanka Pvt Ltd</h1>
+              <div class="inv-tagline">Hummingbird Clothing Division — Official Receipt</div>
+            </div>
+            <div class="inv-head-meta">
+              <div style="font-size:10px;opacity:.7;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px">Receipt No.</div>
+              <div class="inv-no" id="rcpt-no">—</div>
+              <div class="inv-created" id="rcpt-date">Date: —</div>
+            </div>
+          </div>
+        </div>
+        <div class="inv-body">
+            <div class="inv-meta">
+              <div class="inv-meta-block"><h4>Paid To (Sub-Agent)</h4><p id="rcpt-agent">—</p></div>
+              <div class="inv-meta-block"><h4>Payment Details</h4><p><span id="rcpt-method">—</span> <br> <span style="font-size:11px;color:#6b7a94" id="rcpt-ref"></span></p></div>
+            </div>
+            <div class="inv-total-row" style="justify-content:flex-start;margin-top:0">
+              <div class="inv-total-block" style="width:100%;background:#f0fdf4;border-color:#bbf7d0">
+                <div class="inv-total-line final"><span>Amount Paid</span><span style="color:#059669" id="rcpt-amt">LKR 0.00</span></div>
+                <div style="font-size:12px;color:#047857;margin-top:8px" id="rcpt-note"></div>
+              </div>
+            </div>
+            <div class="inv-sign" style="grid-template-columns:1fr 1fr; max-width:500px; margin-top:50px;">
+              <div class="inv-sign-block"><div class="line"></div>Authorized Signature</div>
+              <div class="inv-sign-block"><div class="line"></div>Sub-Agent Signature</div>
+            </div>
+        </div>
+    </div>
+
+  </div></div><div class="modal-overlay" id="addAgentModal">
+  <div class="modal-box">
+    <div class="modal-title">➕ Add Sub-Garment Agent</div>
+    <div class="form-group"><label class="form-label">Agent Name *</label><input class="form-input" id="newAgentName" placeholder="e.g. Suresh Tailors"></div>
+    <div class="form-group" style="margin-top:12px"><label class="form-label">Contact / Notes</label><input class="form-input" id="newAgentNote" placeholder="Phone or note (optional)"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('addAgentModal')">Cancel</button>
+      <button class="btn btn-success" onclick="addAgent()">Add Agent</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editCutModal">
+  <div class="modal-box modal-box-wide">
+    <div class="modal-title">✏️ Edit Dispatch Entry</div>
+    <input type="hidden" id="editCutId">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Invoice No.</label><input class="form-input" id="ecInvoice"></div>
+      <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="ecDate"></div>
+      <div class="form-group"><label class="form-label">Item Name</label><input class="form-input" id="ecItemName"></div>
+      <div class="form-group"><label class="form-label">Cut Description</label><input class="form-input" id="ecDescription"></div>
+      <div class="form-group"><label class="form-label">No. of Cuts</label><input type="number" class="form-input" id="ecLayers" oninput="calcEditCut()"></div>
+      <div class="form-group"><label class="form-label">Layers per Cut</label><input type="number" class="form-input" id="ecSizes" oninput="calcEditCut()"></div>
+      <div class="form-group"><label class="form-label">Sizes</label><input class="form-input" id="ecSizesLabel"></div>
+      <div class="form-group"><label class="form-label">Unit Rate</label><input type="number" class="form-input" id="ecRate" step="0.01" oninput="calcEditCut()"></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-input" id="ecStatus">
+          <option value="Pending">⏳ Pending</option>
+          <option value="In Progress">🔄 In Progress</option>
+          <option value="Completed">✅ Completed</option>
+        </select>
+      </div>
+    </div>
+    <div class="calc-note" id="ecCalcNote"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editCutModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditCut()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editFinModal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Edit Finishing Entry</div>
+    <input type="hidden" id="editFinId">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Grade A</label><input type="number" class="form-input" id="efGradeA" oninput="calcEditFin()"></div>
+      <div class="form-group"><label class="form-label">Dmg Complete</label><input type="number" class="form-input" id="efDmgComp" oninput="calcEditFin()"></div>
+      <div class="form-group"><label class="form-label">Waste</label><input type="number" class="form-input" id="efWaste" oninput="calcEditFin()"></div>
+      <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="efDate"></div>
+    </div>
+    <div class="calc-note" id="efCalcNote"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editFinModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditFin()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editLedModal">
+  <div class="modal-box">
+    <div class="modal-title">✏️ Edit Ledger Entry</div>
+    <input type="hidden" id="editLedId">
+    <div class="form-grid">
+      <div class="form-group"><label class="form-label">Date</label><input type="date" class="form-input" id="elDate"></div>
+      <div class="form-group"><label class="form-label">Reference</label><input class="form-input" id="elRef"></div>
+      <div class="form-group"><label class="form-label">Amount (LKR)</label><input type="number" class="form-input" id="elAmt" step="0.01"></div>
+      <div class="form-group"><label class="form-label">Payment Method</label>
+        <select class="form-input" id="elPayMtd">
+          <option value="">N/A</option>
+          <option>Cash Payment</option><option>Cheque Payment</option><option>Bank Deposit</option><option>Online Transfer</option>
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Cheque / Transfer Ref</label><input class="form-input" id="elTxRef" placeholder="Cheque No / Transaction ID"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('editLedModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEditLed()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal-box" style="max-width:360px">
+    <div class="modal-title">🗑️ Confirm Delete</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6">Are you sure you want to delete this entry? This cannot be undone.</p>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
